@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Part-Whole Number Bonds</title>
+  <style>
+    /* Overall Page Style with a pinkish, cute palette */
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: "Helvetica Neue", Arial, sans-serif;
+      background: #ffe6f2; /* soft pink background */
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+    
+    h1 {
+      margin-top: 20px;
+      color: #d6336c;
+      text-align: center;
+    }
+
+    /* Main game container */
+    .game-container {
+      margin-top: 20px;
+      background: #fff0f5;
+      border-radius: 15px;
+      width: 90%;
+      max-width: 500px;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+      padding: 20px;
+      text-align: center;
+      position: relative;
+    }
+
+    /* Diagram container for the part-whole diagram */
+    .diagram-container {
+      margin: 20px auto;
+      width: 250px;
+    }
+    
+    /* The whole circle (top) */
+    .circle.whole {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background-color: #f8bbd0;
+      border: 3px solid #d6336c;
+      margin: 0 auto;
+      font-size: 2rem;
+      line-height: 80px;
+      color: #d6336c;
+    }
+    
+    /* Container for the parts (lower circles) */
+    .parts {
+      display: flex;
+      justify-content: space-around;
+      margin-top: 20px;
+    }
+    
+    /* Each part circle */
+    .circle.part {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background-color: #f8bbd0;
+      border: 3px solid #d6336c;
+      font-size: 1.5rem;
+      line-height: 60px;
+      color: #d6336c;
+    }
+    
+    /* When a circle is "empty" (i.e. the missing number) */
+    .empty {
+      background-color: #fff;
+      color: transparent;
+    }
+
+    /* Options container */
+    .options {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin: 20px 0;
+    }
+
+    .option-button {
+      background: #ff80ab;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 15px;
+      font-size: 1.2rem;
+      cursor: pointer;
+      flex: 1 1 30%;
+      max-width: 120px;
+      transition: background 0.3s;
+    }
+
+    .option-button:hover {
+      background: #ff4081;
+    }
+
+    /* Feedback image - now centered and 2x bigger */
+    #feedbackImage {
+      display: block;
+      margin: 10px auto;
+      width: 300px; /* increased width */
+      height: auto;
+      display: none;
+    }
+
+    /* Score display */
+    .score {
+      margin-top: 20px;
+      font-size: 1.2rem;
+      color: #d6336c;
+    }
+
+    /* Celebrate animation for 5 consecutive correct answers */
+    .celebrate-effect {
+      animation: celebrateAnim 1s ease-out;
+    }
+
+    @keyframes celebrateAnim {
+      0%   { transform: scale(1); }
+      50%  { transform: scale(1.2); }
+      100% { transform: scale(1); }
+    }
+  </style>
+</head>
+<body>
+  <h1>Pinki's Number Bonds</h1>
+  
+  <div class="game-container" id="gameContainer">
+    <!-- Diagram Container -->
+    <div class="diagram-container" id="diagramContainer">
+      <!-- Whole number (top circle) -->
+      <div class="circle whole" id="wholeCircle"></div>
+      <!-- Lower parts -->
+      <div class="parts">
+        <div class="circle part" id="part1Circle"></div>
+        <div class="circle part" id="part2Circle"></div>
+      </div>
+    </div>
+
+    <!-- Options Buttons -->
+    <div class="options" id="optionsContainer">
+      <!-- Buttons will be generated dynamically -->
+    </div>
+
+    <!-- Feedback Image -->
+    <img id="feedbackImage" alt="Feedback Image">
+
+    <!-- Score -->
+    <div class="score" id="scoreText">Score: 0</div>
+  </div>
+
+  <script>
+    // --- Configuration & Global Variables ---
+    // We'll create two types of problems: "addition" and "subtraction"
+    let problemType = "";
+    let correctAnswer = 0;
+    let score = 0;
+    let consecutiveCorrect = 0;
+
+    // Image arrays – ensure these files are available in your project folder
+    const happyImages = [
+      "happy-uni1.jpeg",
+      "happy-uni2.jpeg",
+      "happy-uni3.jpeg",
+      "happy-uni4.jpeg",
+      "happy-uni5.jpeg",
+      "happy-uni6.jpeg",
+      "happy-uni7.jpeg"
+    ];
+
+    const sadImages = [
+      "sad-uni1.jpeg"
+    ];
+
+    // --- Utility Functions ---
+    // Returns a random integer between min and max (inclusive)
+    function randomInt(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    // Shuffle an array (Fisher–Yates shuffle)
+    function shuffleArray(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = randomInt(0, i);
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+      return array;
+    }
+
+    // Randomly pick an image URL from an array
+    function pickRandomImage(arr) {
+      return arr[randomInt(0, arr.length - 1)];
+    }
+
+    // --- Problem Generation ---
+    function generateProblem() {
+      // Make sure the diagram and options are visible.
+      document.getElementById("diagramContainer").style.display = "block";
+      document.getElementById("optionsContainer").style.display = "flex";
+      // Hide the feedback image
+      document.getElementById("feedbackImage").style.display = "none";
+      
+      // Randomly decide between an addition or subtraction problem (50/50 chance)
+      problemType = randomInt(0, 1) === 0 ? "addition" : "subtraction";
+
+      // Get references to our diagram circles
+      const wholeCircle = document.getElementById("wholeCircle");
+      const part1Circle = document.getElementById("part1Circle");
+      const part2Circle = document.getElementById("part2Circle");
+
+      if (problemType === "addition") {
+        // For addition:
+        // - Two lower circles are filled with numbers.
+        // - The top circle (whole) is empty.
+        let num1 = randomInt(1, 9);
+        let num2 = randomInt(1, 9);
+        correctAnswer = num1 + num2;
+        // Set diagram:
+        wholeCircle.textContent = ""; 
+        wholeCircle.classList.add("empty");
+        part1Circle.textContent = num1;
+        part1Circle.classList.remove("empty");
+        part2Circle.textContent = num2;
+        part2Circle.classList.remove("empty");
+      } else {
+        // For subtraction:
+        // - The top circle (whole) and one lower circle are filled.
+        // - The other lower circle is empty.
+        let known = randomInt(1, 9);
+        let missing = randomInt(1, 9);
+        let whole = known + missing;
+        correctAnswer = missing; // the missing part is what the child must find
+
+        // Set the top circle to whole.
+        wholeCircle.textContent = whole;
+        wholeCircle.classList.remove("empty");
+
+        // Randomly assign the known number to one of the two lower circles.
+        if (randomInt(0, 1) === 0) {
+          part1Circle.textContent = known;
+          part1Circle.classList.remove("empty");
+          part2Circle.textContent = "";
+          part2Circle.classList.add("empty");
+        } else {
+          part2Circle.textContent = known;
+          part2Circle.classList.remove("empty");
+          part1Circle.textContent = "";
+          part1Circle.classList.add("empty");
+        }
+      }
+
+      // Generate options for multiple choice.
+      generateOptions(correctAnswer);
+    }
+
+    function generateOptions(correctAnswer) {
+      const optionsContainer = document.getElementById("optionsContainer");
+      optionsContainer.innerHTML = ""; // Clear previous options
+
+      // Create a set for unique options and add the correct answer.
+      const optionsSet = new Set();
+      optionsSet.add(correctAnswer);
+
+      // We'll generate two distractor options.
+      // For addition problems, the sum can range roughly from 2 to 18.
+      // For subtraction, the missing part will be between 1 and 9.
+      let min = problemType === "addition" ? 2 : 1;
+      let max = problemType === "addition" ? 18 : 9;
+      while (optionsSet.size < 3) {
+        let option = randomInt(min, max);
+        optionsSet.add(option);
+      }
+
+      // Shuffle the options and create button elements.
+      const optionsArray = shuffleArray(Array.from(optionsSet));
+      optionsArray.forEach(option => {
+        const button = document.createElement("button");
+        button.className = "option-button";
+        button.textContent = option;
+        button.onclick = () => checkAnswer(option);
+        optionsContainer.appendChild(button);
+      });
+    }
+
+    // --- Answer Checking & Feedback ---
+    function checkAnswer(selected) {
+      const feedbackImage = document.getElementById("feedbackImage");
+      const gameContainer = document.getElementById("gameContainer");
+      const diagramContainer = document.getElementById("diagramContainer");
+      const optionsContainer = document.getElementById("optionsContainer");
+
+      if (selected === correctAnswer) {
+        score++;
+        consecutiveCorrect++;
+        feedbackImage.src = pickRandomImage(happyImages);
+      } else {
+        consecutiveCorrect = 0;
+        feedbackImage.src = pickRandomImage(sadImages);
+      }
+
+      // Hide the diagram and options for both correct and incorrect responses.
+      diagramContainer.style.display = "none";
+      optionsContainer.style.display = "none";
+      feedbackImage.style.display = "block";
+
+      // If 5 correct in a row, trigger a celebratory visual effect.
+      if (selected === correctAnswer && consecutiveCorrect === 5) {
+        gameContainer.classList.add("celebrate-effect");
+        setTimeout(() => {
+          gameContainer.classList.remove("celebrate-effect");
+        }, 1000);
+        consecutiveCorrect = 0; // reset counter
+      }
+      
+      document.getElementById("scoreText").textContent = "Score: " + score;
+      
+      // After 2 seconds, move to the next problem.
+      setTimeout(generateProblem, 2000);
+    }
+
+    // --- Initialize the Game ---
+    window.onload = generateProblem;
+  </script>
+</body>
+</html>
