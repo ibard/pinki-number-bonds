@@ -142,12 +142,12 @@
       100% { transform: scale(1); }
     }
 
-    /* --- New Styles for the Rainbow Unicorn Puzzle --- */
+    /* --- Styles for the Puzzle (Image Reveal) --- */
     /* 
-       The original reward image is 1536×1024 (aspect ratio 1.5).  
-       We set the puzzle container to 300×200, which keeps the same ratio.
-       The grid is 6 columns × 4 rows; therefore each tile shows 1/6 of the width 
-       and 1/4 of the height. The background-size "600% 400%" splits the image accordingly.
+       The challenge images are 1536×1024 (aspect ratio 1.5).  
+       The puzzle container is set to 300×200, preserving that ratio.
+       With a grid of 6 columns × 4 rows, each tile shows 1/6 of the width and 1/4 of the height.
+       The background-size "600% 400%" splits the image accordingly.
     */
     #rainbowPuzzle {
       width: 300px;
@@ -160,9 +160,25 @@
       margin: 20px auto;
     }
     .rainbow-tile {
-      background-image: url('rainbow-unicorn.jpeg');
       background-size: 600% 400%;
       visibility: hidden;
+    }
+
+    /* New Challenge Button */
+    #newChallengeButton {
+      display: none;
+      margin-top: 10px;
+      padding: 10px 15px;
+      font-size: 1.2rem;
+      border: none;
+      border-radius: 8px;
+      background: #ff80ab;
+      color: white;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    #newChallengeButton:hover {
+      background: #ff4081;
     }
   </style>
 </head>
@@ -194,11 +210,14 @@
     <!-- Feedback Image -->
     <img id="feedbackImage" alt="Feedback Image">
 
-    <!-- Score -->
+    <!-- Score Display -->
     <div class="score" id="scoreText">Score: 0 / 0</div>
 
-    <!-- Rainbow Unicorn Puzzle (Image Reveal) -->
+    <!-- Puzzle (Image Reveal) -->
     <div id="rainbowPuzzle"></div>
+    
+    <!-- START NEW CHALLENGE Button (appears when the puzzle is complete) -->
+    <button id="newChallengeButton">START NEW CHALLENGE</button>
   </div>
 
   <script>
@@ -208,18 +227,22 @@
     let correctAnswer = 0;
     let score = 0;
     let consecutiveCorrect = 0;
-    // New variable to control the display mode: "diagram" or "equation"
     let displayMode = "";
-    // Count total questions attempted
     let totalQuestions = 0;
 
-    // Variables for the rainbow unicorn puzzle
+    // Variables for the puzzle
     let revealedTiles = 0;
     const totalTiles = 24;
-    // Array to hold a random order of tile indices
     let tileOrder = [];
 
-    // Image arrays – ensure these files are available in your project folder
+    // Challenge images (animal baby images)
+    const challengeImages = ["fox.jpeg", "otter.jpeg", "bunny.jpeg", "kitty.jpeg"];
+    // unsolvedChallengeImages will hold images not yet used in the current cycle.
+    let unsolvedChallengeImages = challengeImages.slice();
+    // currentPuzzleImage is set from unsolvedChallengeImages.
+    let currentPuzzleImage = unsolvedChallengeImages.shift();
+
+    // Image arrays for feedback – ensure these files are available in your project folder
     const happyImages = [
       "happy-uni1.jpeg",
       "happy-uni2.jpeg",
@@ -229,10 +252,7 @@
       "happy-uni6.jpeg",
       "happy-uni7.jpeg"
     ];
-
-    const sadImages = [
-      "sad-uni1.jpeg"
-    ];
+    const sadImages = ["sad-uni1.jpeg"];
 
     // --- Utility Functions ---
     // Returns a random integer between min and max (inclusive)
@@ -249,31 +269,33 @@
       return array;
     }
 
-    // Randomly pick an image URL from an array
+    // Randomly pick an image URL from an array (used for feedback images)
     function pickRandomImage(arr) {
       return arr[randomInt(0, arr.length - 1)];
     }
 
-    // --- Rainbow Puzzle Initialization ---
-    function initializeRainbowPuzzle() {
+    // --- Puzzle (Image Reveal) Initialization ---
+    function initializePuzzle() {
       const puzzle = document.getElementById('rainbowPuzzle');
-      puzzle.innerHTML = ""; // Clear any existing tiles
-      revealedTiles = 0;     // Reset the revealed tile counter
-      tileOrder = [];        // Reset the random order array
+      puzzle.innerHTML = "";       // Clear any existing tiles
+      revealedTiles = 0;           // Reset the revealed tile counter
+      tileOrder = [];              // Reset the random order array
 
-      // Create 24 tiles in a 6×4 grid
+      // Create 24 tiles (6 columns x 4 rows)
       for (let i = 0; i < totalTiles; i++) {
         tileOrder.push(i);
         let tile = document.createElement('div');
         tile.classList.add('rainbow-tile');
-        // Determine the tile's row and column (6 columns, 4 rows)
+        // Set the background image using the currentPuzzleImage
+        tile.style.backgroundImage = `url('${currentPuzzleImage}')`;
+        // Calculate the tile's row and column (6 columns, 4 rows)
         const col = i % 6;
         const row = Math.floor(i / 6);
-        // Set background-position so that when all tiles are visible the image is complete.
+        // Set the background position so that when all tiles are visible the image is complete.
         tile.style.backgroundPosition = (-col * 100) + '% ' + (-row * 100) + '%';
         puzzle.appendChild(tile);
       }
-      // Shuffle the tileOrder array so tiles are revealed in a random order.
+      // Shuffle tileOrder so that tiles are revealed in random order.
       tileOrder = shuffleArray(tileOrder);
     }
 
@@ -282,56 +304,41 @@
       // Randomly choose the display mode: diagram or equation (50/50 chance)
       displayMode = randomInt(0, 1) === 0 ? "diagram" : "equation";
 
-      // Get references to the diagram and equation containers
+      // Get references to containers
       const diagramContainer = document.getElementById("diagramContainer");
       const equationContainer = document.getElementById("equationContainer");
       const optionsContainer = document.getElementById("optionsContainer");
-      // Ensure options are visible
+      // Ensure options are visible and hide feedback image
       optionsContainer.style.display = "flex";
-      // Hide feedback image
       document.getElementById("feedbackImage").style.display = "none";
 
       if (displayMode === "diagram") {
-        // Show diagram container and hide equation container
         diagramContainer.style.display = "block";
         equationContainer.style.display = "none";
-
-        // Randomly decide between an addition or subtraction problem (50/50 chance)
         problemType = randomInt(0, 1) === 0 ? "addition" : "subtraction";
 
-        // Get references to our diagram circles
         const wholeCircle = document.getElementById("wholeCircle");
         const part1Circle = document.getElementById("part1Circle");
         const part2Circle = document.getElementById("part2Circle");
 
         if (problemType === "addition") {
-          // For addition:
-          // - Two lower circles are filled with numbers.
-          // - The top circle (whole) is empty.
           let num1 = randomInt(1, 9);
           let num2 = randomInt(1, 9);
           correctAnswer = num1 + num2;
-          // Set diagram:
-          wholeCircle.textContent = ""; 
+          wholeCircle.textContent = "";
           wholeCircle.classList.add("empty");
           part1Circle.textContent = num1;
           part1Circle.classList.remove("empty");
           part2Circle.textContent = num2;
           part2Circle.classList.remove("empty");
         } else {
-          // For subtraction:
-          // - The top circle (whole) and one lower circle are filled.
-          // - The other lower circle is empty.
           let known = randomInt(1, 9);
           let missing = randomInt(1, 9);
           let whole = known + missing;
-          correctAnswer = missing; // the missing part is what the child must find
-
-          // Set the top circle to whole.
+          correctAnswer = missing;
           wholeCircle.textContent = whole;
           wholeCircle.classList.remove("empty");
 
-          // Randomly assign the known number to one of the two lower circles.
           if (randomInt(0, 1) === 0) {
             part1Circle.textContent = known;
             part1Circle.classList.remove("empty");
@@ -345,34 +352,25 @@
           }
         }
       } else {
-        // Equation mode:
-        // Hide diagram container and show equation container.
         diagramContainer.style.display = "none";
         equationContainer.style.display = "block";
-
-        // Randomly decide between addition and subtraction.
         problemType = randomInt(0, 1) === 0 ? "addition" : "subtraction";
 
         let equationText = "";
         if (problemType === "addition") {
-          // For equation addition, let’s display: "num1 + ❤️ = sum"
           let num1 = randomInt(1, 9);
           let num2 = randomInt(1, 9);
           correctAnswer = num2; // missing addend
           equationText = `${num1} + ❤️ = ${num1 + num2}`;
         } else {
-          // For equation subtraction, display: "whole - ❤️ = known"
           let known = randomInt(1, 9);
           let missing = randomInt(1, 9);
           let whole = known + missing;
-          correctAnswer = missing; // missing number
+          correctAnswer = missing;
           equationText = `${whole} - ❤️ = ${known}`;
         }
-        // Set the equation text in the container.
         equationContainer.textContent = equationText;
       }
-
-      // Generate options for multiple choice.
       generateOptions(correctAnswer);
     }
 
@@ -380,21 +378,15 @@
       const optionsContainer = document.getElementById("optionsContainer");
       optionsContainer.innerHTML = ""; // Clear previous options
 
-      // Create a set for unique options and add the correct answer.
       const optionsSet = new Set();
       optionsSet.add(correctAnswer);
 
-      // We'll generate two distractor options.
-      // For addition problems, the sum can range roughly from 2 to 18.
-      // For subtraction, the missing part will be between 1 and 9.
       let min = problemType === "addition" ? 2 : 1;
       let max = problemType === "addition" ? 18 : 9;
       while (optionsSet.size < 3) {
         let option = randomInt(min, max);
         optionsSet.add(option);
       }
-
-      // Shuffle the options and create button elements.
       const optionsArray = shuffleArray(Array.from(optionsSet));
       optionsArray.forEach(option => {
         const button = document.createElement("button");
@@ -407,12 +399,11 @@
 
     // --- Answer Checking & Feedback ---
     function checkAnswer(selected) {
-      // Increase total questions count on every answer attempt.
       totalQuestions++;
 
       const feedbackImage = document.getElementById("feedbackImage");
       const gameContainer = document.getElementById("gameContainer");
-      // Regardless of mode, hide both the diagram and equation containers.
+      // Hide diagram, equation, and options
       document.getElementById("diagramContainer").style.display = "none";
       document.getElementById("equationContainer").style.display = "none";
       document.getElementById("optionsContainer").style.display = "none";
@@ -421,40 +412,56 @@
         score++;
         consecutiveCorrect++;
         feedbackImage.src = pickRandomImage(happyImages);
-        // Reveal the next tile in the rainbow unicorn puzzle (if available)
+        // Reveal the next tile in the puzzle (if available)
         if (revealedTiles < totalTiles) {
           const puzzle = document.getElementById('rainbowPuzzle');
-          // Use the shuffled tileOrder array for a random reveal order.
           const tileIndex = tileOrder[revealedTiles];
           puzzle.children[tileIndex].style.visibility = 'visible';
           revealedTiles++;
+        }
+        // If all tiles have been revealed, show the "START NEW CHALLENGE" button and exit.
+        if (revealedTiles === totalTiles) {
+          document.getElementById("newChallengeButton").style.display = "block";
+          feedbackImage.style.display = "block";
+          document.getElementById("scoreText").textContent = "Score: " + score + " / " + totalQuestions;
+          return;
         }
       } else {
         consecutiveCorrect = 0;
         feedbackImage.src = pickRandomImage(sadImages);
       }
-
       feedbackImage.style.display = "block";
-
-      // If 5 correct in a row, trigger a celebratory visual effect.
-      if (selected === correctAnswer && consecutiveCorrect === 5) {
-        gameContainer.classList.add("celebrate-effect");
-        setTimeout(() => {
-          gameContainer.classList.remove("celebrate-effect");
-        }, 1000);
-        consecutiveCorrect = 0; // reset counter
-      }
-      
-      // Update the score display to show "correct / total"
       document.getElementById("scoreText").textContent = "Score: " + score + " / " + totalQuestions;
-      
-      // After 2 seconds, move to the next problem.
       setTimeout(generateProblem, 2000);
     }
 
+    // --- Event Listener for New Challenge ---
+    document.getElementById("newChallengeButton").addEventListener("click", function() {
+      // Reset score and counters for the new challenge.
+      score = 0;
+      totalQuestions = 0;
+      consecutiveCorrect = 0;
+      document.getElementById("scoreText").textContent = "Score: 0 / 0";
+
+      // Pick a new challenge image that has not yet been solved.
+      if (unsolvedChallengeImages.length === 0) {
+        // All images have been solved; reset the list.
+        unsolvedChallengeImages = challengeImages.slice();
+      }
+      currentPuzzleImage = unsolvedChallengeImages.shift();
+
+      // Reinitialize the puzzle grid with the new image.
+      initializePuzzle();
+      // Hide the new challenge button.
+      this.style.display = "none";
+      // Proceed with a new problem.
+      generateProblem();
+    });
+
     // --- Initialize the Game ---
     window.onload = () => {
-      initializeRainbowPuzzle();  // Build the rainbow unicorn puzzle grid and randomize tile order
+      // Initialize the puzzle grid using the first challenge image.
+      initializePuzzle();
       generateProblem();
     };
   </script>
