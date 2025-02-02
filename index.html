@@ -141,6 +141,29 @@
       50%  { transform: scale(1.2); }
       100% { transform: scale(1); }
     }
+
+    /* --- New Styles for the Rainbow Unicorn Puzzle --- */
+    /* 
+       The original reward image is 1536×1024 (aspect ratio 1.5).  
+       We set the puzzle container to 300×200, which keeps the same ratio.
+       The grid is 6 columns × 4 rows; therefore each tile shows 1/6 of the width 
+       and 1/4 of the height. The background-size "600% 400%" splits the image accordingly.
+    */
+    #rainbowPuzzle {
+      width: 300px;
+      height: 200px;
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      grid-template-rows: repeat(4, 1fr);
+      gap: 1px;
+      border: 2px solid #000;
+      margin: 20px auto;
+    }
+    .rainbow-tile {
+      background-image: url('rainbow-unicorn.jpeg');
+      background-size: 600% 400%;
+      visibility: hidden;
+    }
   </style>
 </head>
 <body>
@@ -172,7 +195,10 @@
     <img id="feedbackImage" alt="Feedback Image">
 
     <!-- Score -->
-    <div class="score" id="scoreText">Score: 0</div>
+    <div class="score" id="scoreText">Score: 0 / 0</div>
+
+    <!-- Rainbow Unicorn Puzzle (Image Reveal) -->
+    <div id="rainbowPuzzle"></div>
   </div>
 
   <script>
@@ -183,7 +209,15 @@
     let score = 0;
     let consecutiveCorrect = 0;
     // New variable to control the display mode: "diagram" or "equation"
-    let displayMode = "diagram";
+    let displayMode = "";
+    // Count total questions attempted
+    let totalQuestions = 0;
+
+    // Variables for the rainbow unicorn puzzle
+    let revealedTiles = 0;
+    const totalTiles = 24;
+    // Array to hold a random order of tile indices
+    let tileOrder = [];
 
     // Image arrays – ensure these files are available in your project folder
     const happyImages = [
@@ -218,6 +252,29 @@
     // Randomly pick an image URL from an array
     function pickRandomImage(arr) {
       return arr[randomInt(0, arr.length - 1)];
+    }
+
+    // --- Rainbow Puzzle Initialization ---
+    function initializeRainbowPuzzle() {
+      const puzzle = document.getElementById('rainbowPuzzle');
+      puzzle.innerHTML = ""; // Clear any existing tiles
+      revealedTiles = 0;     // Reset the revealed tile counter
+      tileOrder = [];        // Reset the random order array
+
+      // Create 24 tiles in a 6×4 grid
+      for (let i = 0; i < totalTiles; i++) {
+        tileOrder.push(i);
+        let tile = document.createElement('div');
+        tile.classList.add('rainbow-tile');
+        // Determine the tile's row and column (6 columns, 4 rows)
+        const col = i % 6;
+        const row = Math.floor(i / 6);
+        // Set background-position so that when all tiles are visible the image is complete.
+        tile.style.backgroundPosition = (-col * 100) + '% ' + (-row * 100) + '%';
+        puzzle.appendChild(tile);
+      }
+      // Shuffle the tileOrder array so tiles are revealed in a random order.
+      tileOrder = shuffleArray(tileOrder);
     }
 
     // --- Problem Generation ---
@@ -350,6 +407,9 @@
 
     // --- Answer Checking & Feedback ---
     function checkAnswer(selected) {
+      // Increase total questions count on every answer attempt.
+      totalQuestions++;
+
       const feedbackImage = document.getElementById("feedbackImage");
       const gameContainer = document.getElementById("gameContainer");
       // Regardless of mode, hide both the diagram and equation containers.
@@ -361,6 +421,14 @@
         score++;
         consecutiveCorrect++;
         feedbackImage.src = pickRandomImage(happyImages);
+        // Reveal the next tile in the rainbow unicorn puzzle (if available)
+        if (revealedTiles < totalTiles) {
+          const puzzle = document.getElementById('rainbowPuzzle');
+          // Use the shuffled tileOrder array for a random reveal order.
+          const tileIndex = tileOrder[revealedTiles];
+          puzzle.children[tileIndex].style.visibility = 'visible';
+          revealedTiles++;
+        }
       } else {
         consecutiveCorrect = 0;
         feedbackImage.src = pickRandomImage(sadImages);
@@ -377,14 +445,18 @@
         consecutiveCorrect = 0; // reset counter
       }
       
-      document.getElementById("scoreText").textContent = "Score: " + score;
+      // Update the score display to show "correct / total"
+      document.getElementById("scoreText").textContent = "Score: " + score + " / " + totalQuestions;
       
       // After 2 seconds, move to the next problem.
       setTimeout(generateProblem, 2000);
     }
 
     // --- Initialize the Game ---
-    window.onload = generateProblem;
+    window.onload = () => {
+      initializeRainbowPuzzle();  // Build the rainbow unicorn puzzle grid and randomize tile order
+      generateProblem();
+    };
   </script>
 </body>
 </html>
