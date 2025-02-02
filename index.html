@@ -42,6 +42,15 @@
       width: 250px;
     }
     
+    /* Equation container */
+    .equation-container {
+      margin: 20px auto;
+      font-size: 2.5rem;
+      color: #d6336c;
+      font-weight: bold;
+      display: none; /* hidden by default */
+    }
+
     /* The whole circle (top) */
     .circle.whole {
       width: 80px;
@@ -149,6 +158,11 @@
       </div>
     </div>
 
+    <!-- Equation Container (hidden by default) -->
+    <div class="equation-container" id="equationContainer">
+      <!-- Equation text will be generated dynamically -->
+    </div>
+
     <!-- Options Buttons -->
     <div class="options" id="optionsContainer">
       <!-- Buttons will be generated dynamically -->
@@ -168,6 +182,8 @@
     let correctAnswer = 0;
     let score = 0;
     let consecutiveCorrect = 0;
+    // New variable to control the display mode: "diagram" or "equation"
+    let displayMode = "diagram";
 
     // Image arrays – ensure these files are available in your project folder
     const happyImages = [
@@ -206,59 +222,97 @@
 
     // --- Problem Generation ---
     function generateProblem() {
-      // Make sure the diagram and options are visible.
-      document.getElementById("diagramContainer").style.display = "block";
-      document.getElementById("optionsContainer").style.display = "flex";
-      // Hide the feedback image
+      // Randomly choose the display mode: diagram or equation (50/50 chance)
+      displayMode = randomInt(0, 1) === 0 ? "diagram" : "equation";
+
+      // Get references to the diagram and equation containers
+      const diagramContainer = document.getElementById("diagramContainer");
+      const equationContainer = document.getElementById("equationContainer");
+      const optionsContainer = document.getElementById("optionsContainer");
+      // Ensure options are visible
+      optionsContainer.style.display = "flex";
+      // Hide feedback image
       document.getElementById("feedbackImage").style.display = "none";
-      
-      // Randomly decide between an addition or subtraction problem (50/50 chance)
-      problemType = randomInt(0, 1) === 0 ? "addition" : "subtraction";
 
-      // Get references to our diagram circles
-      const wholeCircle = document.getElementById("wholeCircle");
-      const part1Circle = document.getElementById("part1Circle");
-      const part2Circle = document.getElementById("part2Circle");
+      if (displayMode === "diagram") {
+        // Show diagram container and hide equation container
+        diagramContainer.style.display = "block";
+        equationContainer.style.display = "none";
 
-      if (problemType === "addition") {
-        // For addition:
-        // - Two lower circles are filled with numbers.
-        // - The top circle (whole) is empty.
-        let num1 = randomInt(1, 9);
-        let num2 = randomInt(1, 9);
-        correctAnswer = num1 + num2;
-        // Set diagram:
-        wholeCircle.textContent = ""; 
-        wholeCircle.classList.add("empty");
-        part1Circle.textContent = num1;
-        part1Circle.classList.remove("empty");
-        part2Circle.textContent = num2;
-        part2Circle.classList.remove("empty");
-      } else {
-        // For subtraction:
-        // - The top circle (whole) and one lower circle are filled.
-        // - The other lower circle is empty.
-        let known = randomInt(1, 9);
-        let missing = randomInt(1, 9);
-        let whole = known + missing;
-        correctAnswer = missing; // the missing part is what the child must find
+        // Randomly decide between an addition or subtraction problem (50/50 chance)
+        problemType = randomInt(0, 1) === 0 ? "addition" : "subtraction";
 
-        // Set the top circle to whole.
-        wholeCircle.textContent = whole;
-        wholeCircle.classList.remove("empty");
+        // Get references to our diagram circles
+        const wholeCircle = document.getElementById("wholeCircle");
+        const part1Circle = document.getElementById("part1Circle");
+        const part2Circle = document.getElementById("part2Circle");
 
-        // Randomly assign the known number to one of the two lower circles.
-        if (randomInt(0, 1) === 0) {
-          part1Circle.textContent = known;
+        if (problemType === "addition") {
+          // For addition:
+          // - Two lower circles are filled with numbers.
+          // - The top circle (whole) is empty.
+          let num1 = randomInt(1, 9);
+          let num2 = randomInt(1, 9);
+          correctAnswer = num1 + num2;
+          // Set diagram:
+          wholeCircle.textContent = ""; 
+          wholeCircle.classList.add("empty");
+          part1Circle.textContent = num1;
           part1Circle.classList.remove("empty");
-          part2Circle.textContent = "";
-          part2Circle.classList.add("empty");
-        } else {
-          part2Circle.textContent = known;
+          part2Circle.textContent = num2;
           part2Circle.classList.remove("empty");
-          part1Circle.textContent = "";
-          part1Circle.classList.add("empty");
+        } else {
+          // For subtraction:
+          // - The top circle (whole) and one lower circle are filled.
+          // - The other lower circle is empty.
+          let known = randomInt(1, 9);
+          let missing = randomInt(1, 9);
+          let whole = known + missing;
+          correctAnswer = missing; // the missing part is what the child must find
+
+          // Set the top circle to whole.
+          wholeCircle.textContent = whole;
+          wholeCircle.classList.remove("empty");
+
+          // Randomly assign the known number to one of the two lower circles.
+          if (randomInt(0, 1) === 0) {
+            part1Circle.textContent = known;
+            part1Circle.classList.remove("empty");
+            part2Circle.textContent = "";
+            part2Circle.classList.add("empty");
+          } else {
+            part2Circle.textContent = known;
+            part2Circle.classList.remove("empty");
+            part1Circle.textContent = "";
+            part1Circle.classList.add("empty");
+          }
         }
+      } else {
+        // Equation mode:
+        // Hide diagram container and show equation container.
+        diagramContainer.style.display = "none";
+        equationContainer.style.display = "block";
+
+        // Randomly decide between addition and subtraction.
+        problemType = randomInt(0, 1) === 0 ? "addition" : "subtraction";
+
+        let equationText = "";
+        if (problemType === "addition") {
+          // For equation addition, let’s display: "num1 + ❤️ = sum"
+          let num1 = randomInt(1, 9);
+          let num2 = randomInt(1, 9);
+          correctAnswer = num2; // missing addend
+          equationText = `${num1} + ❤️ = ${num1 + num2}`;
+        } else {
+          // For equation subtraction, display: "whole - ❤️ = known"
+          let known = randomInt(1, 9);
+          let missing = randomInt(1, 9);
+          let whole = known + missing;
+          correctAnswer = missing; // missing number
+          equationText = `${whole} - ❤️ = ${known}`;
+        }
+        // Set the equation text in the container.
+        equationContainer.textContent = equationText;
       }
 
       // Generate options for multiple choice.
@@ -298,9 +352,11 @@
     function checkAnswer(selected) {
       const feedbackImage = document.getElementById("feedbackImage");
       const gameContainer = document.getElementById("gameContainer");
-      const diagramContainer = document.getElementById("diagramContainer");
-      const optionsContainer = document.getElementById("optionsContainer");
-
+      // Regardless of mode, hide both the diagram and equation containers.
+      document.getElementById("diagramContainer").style.display = "none";
+      document.getElementById("equationContainer").style.display = "none";
+      document.getElementById("optionsContainer").style.display = "none";
+      
       if (selected === correctAnswer) {
         score++;
         consecutiveCorrect++;
@@ -310,9 +366,6 @@
         feedbackImage.src = pickRandomImage(sadImages);
       }
 
-      // Hide the diagram and options for both correct and incorrect responses.
-      diagramContainer.style.display = "none";
-      optionsContainer.style.display = "none";
       feedbackImage.style.display = "block";
 
       // If 5 correct in a row, trigger a celebratory visual effect.
